@@ -1,1 +1,18 @@
-{"sections":{},"order":[]}
+{
+  "sections": {
+    "hero": {
+      "type": "hero-banner"
+    },
+    "featured": {
+      "type": "featured-products"
+    },
+    "why": {
+      "type": "why-lotto"
+    }
+  },
+  "order": [
+    "hero",
+    "featured",
+    "why"
+  ]
+}
