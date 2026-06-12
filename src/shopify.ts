@@ -1,15 +1,18 @@
-const domain = import.meta.env.PUBLIC_STORE_DOMAIN;
-const token = import.meta.env.PUBLIC_STOREFRONT_API_TOKEN;
+// TEMPORARILY replace the import.meta.env lines with hardcoded strings:
+const domain = 'demoforlotto.myshopify.com';
+const token = '344577b4fff0eae49fce9fbee6a3edc9'; // Paste your clean headless token here
+const version = '2026-04';
+
+console.log("DIAGNOSTIC - Domain:", domain, "Token:", token ? "FOUND" : "MISSING");
 
 export async function shopifyFetch({ query, variables = {} }: { query: string; variables?: object }) {
-  const url = `https://${domain}/api/2026-04/graphql.json`;
+  const url = `https://${domain}/api/${version}/graphql.json`;
 
   try {
     const result = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // This specific header tells Shopify it's a safe, public storefront request
         'X-Shopify-Storefront-Access-Token': token, 
       },
       body: JSON.stringify({ query, variables }),
