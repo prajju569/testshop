@@ -1,12 +1,13 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import {
   shopifyFetch,
   CART_CREATE_MUTATION,
   CART_LINES_ADD_MUTATION,
   CART_LINES_UPDATE_MUTATION,
   CART_LINES_REMOVE_MUTATION,
+  Cart,
 } from './shopify';
-import type { Cart } from './shopify';
 
 interface CartContextType {
   cart: Cart | null;

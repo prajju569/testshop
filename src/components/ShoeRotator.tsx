@@ -137,13 +137,7 @@ export default function ShoeRotator({
     { pct: 0.78, line: 'YOURS TO OWN.' },
   ];
 
-  const progress = (() => {
-    const section = sectionRef.current;
-    if (!section) return 0;
-    const scrolled = -section.getBoundingClientRect().top;
-    const maxScroll = section.offsetHeight - window.innerHeight;
-    return Math.min(Math.max(scrolled / maxScroll, 0), 1);
-  });
+  
 
   return (
     <section ref={sectionRef} className="rotator-section">
