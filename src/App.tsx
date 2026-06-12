@@ -6,6 +6,7 @@ import { useCart } from './CartContext';
 import CartModal from './components/CartModal';
 import ShoeRotator from './components/ShoeRotator';
 import CartPage from './pages/CartPage';
+import SearchModal from './components/SearchModal';
 
 const ProductModal = lazy(() => import('./components/ProductModal'));
 
@@ -77,34 +78,150 @@ function Marquee({ inverted }: { inverted?: boolean }) {
 }
 
 /* ── Navbar ── */
-function Navbar() {
+function Navbar({ onSearchOpen }: { onSearchOpen: () => void }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { totalItems } = useCart();
   const navigate = useNavigate();
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', fn);
     return () => window.removeEventListener('scroll', fn);
   }, []);
+
+  // Lock body scroll when menu open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
+
+  // Close on ESC
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, []);
+
+  const handleNavClick = (id: string) => {
+    setMenuOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        navigate('/');
+        setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }), 400);
+      }
+    }, menuOpen ? 500 : 0);
+  };
+
+  const NAV_ITEMS = [
+    { label: 'Collections', id: 'collections' },
+    { label: 'Shop', id: 'products' },
+    { label: 'Story', id: 'story' },
+  ];
+
   return (
-    <nav className={`nav ${scrolled ? 'nav--scrolled' : ''}`}>
-      <div className="nav-inner">
-        <a href="/" className="nav-logo">LOTTO</a>
-        <ul className="nav-links">
-          <li><a href="#collections">Collections</a></li>
-          <li><a href="#products">Shop</a></li>
-          <li><a href="#story">Story</a></li>
+    <>
+      <nav className={`nav ${scrolled ? 'nav--scrolled' : ''}`}>
+        <div className="nav-inner">
+          <a href="/" className="nav-logo" onClick={() => setMenuOpen(false)}>LOTTO</a>
+
+          {/* Desktop links */}
+          <ul className="nav-links">
+            {NAV_ITEMS.map(item => (
+              <li key={item.id}>
+                <button className="nav-link-btn" onClick={() => handleNavClick(item.id)}>
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop actions */}
+          <div className="nav-actions">
+            <button className="nav-search" onClick={onSearchOpen} aria-label="Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+            </button>
+            <button className="nav-cart" onClick={() => navigate('/cart')} aria-label="Cart">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+              {totalItems > 0 && <span className="nav-badge">{totalItems}</span>}
+            </button>
+
+            {/* Hamburger — mobile only */}
+            <button
+              className={`nav-hamburger ${menuOpen ? 'nav-hamburger--open' : ''}`}
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            >
+              <span className="hb-line hb-line--1" />
+              <span className="hb-line hb-line--2" />
+              <span className="hb-line hb-line--3" />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Full screen mobile menu */}
+      <div className={`mobile-menu ${menuOpen ? 'mobile-menu--open' : ''}`}>
+        {/* Background noise texture */}
+        <div className="mm-bg" />
+
+        {/* Corner frame */}
+        <div className="mm-corner mm-corner--tl" />
+        <div className="mm-corner mm-corner--tr" />
+        <div className="mm-corner mm-corner--bl" />
+        <div className="mm-corner mm-corner--br" />
+
+        {/* Nav items */}
+        <ul className="mm-links">
+          {NAV_ITEMS.map((item, i) => (
+            <li
+              key={item.id}
+              className="mm-item"
+              style={{ transitionDelay: menuOpen ? `${i * 80 + 100}ms` : '0ms' }}
+            >
+              <button
+                className="mm-link"
+                onClick={() => handleNavClick(item.id)}
+              >
+                <span className="mm-link-num">0{i + 1}</span>
+                <span className="mm-link-text">{item.label}</span>
+                <span className="mm-link-arrow">→</span>
+              </button>
+            </li>
+          ))}
         </ul>
-        <button className="nav-cart" onClick={() => navigate('/cart')} aria-label="Cart">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <path d="M16 10a4 4 0 0 1-8 0"/>
-          </svg>
-          {totalItems > 0 && <span className="nav-badge">{totalItems}</span>}
-        </button>
+
+        {/* Bottom bar */}
+        <div className="mm-bottom">
+          <div className="mm-bottom-actions">
+            <button className="mm-icon-btn" onClick={() => { setMenuOpen(false); onSearchOpen(); }} aria-label="Search">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <span>Search</span>
+            </button>
+            <button className="mm-icon-btn" onClick={() => { setMenuOpen(false); navigate('/cart'); }} aria-label="Cart">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+              <span>Cart {totalItems > 0 && `(${totalItems})`}</span>
+            </button>
+          </div>
+          <span className="mm-tagline">LOTTO ATHLETIC — SS 2026</span>
+        </div>
       </div>
-    </nav>
+    </>
   );
 }
 
@@ -179,7 +296,7 @@ function Hero({ onShopClick }: { onShopClick: () => void }) {
           <p className="hero-sub">Premium athletic wear. Built for the relentless.</p>
           <div className="hero-ctas">
             <button className="btn-red" onClick={onShopClick}>Shop Now</button>
-            <button className="btn-ghost">Lookbook →</button>
+            <button className="btn-ghost" onClick={onShopClick}>Lookbook →</button>
           </div>
         </div>
 
@@ -232,6 +349,7 @@ const COLS = [
 ];
 
 function Collections() {
+  const scrollToProducts = () => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
   return (
     <section className="section" id="collections">
       <div className="section-head reveal">
@@ -240,7 +358,7 @@ function Collections() {
       </div>
       <div className="cols-grid">
         {COLS.map((c, i) => (
-          <div key={c.name} className={`col-card reveal ${i === 0 ? 'col-card--wide' : ''}`} data-hover="true">
+          <div key={c.name} className={`col-card reveal ${i === 0 ? 'col-card--wide' : ''}`} data-hover="true" onClick={scrollToProducts}>
             <span className="col-tag">{c.tag}</span>
             <div className="col-bottom">
               <h3 className="col-name">{c.name}</h3>
@@ -273,7 +391,9 @@ function Products({ products, onProductClick }: { products: Product[]; onProduct
               <div key={p.id} className="prod-card reveal" onClick={() => onProductClick(p.handle)} data-hover="true">
                 <div className="prod-img">
                   {img ? <img src={img.url} alt={img.altText || p.title} loading="lazy" /> : <div className="prod-no-img">No Image</div>}
-                  <div className="prod-overlay"><span>Quick View</span></div>
+                <div className="prod-overlay">
+                    <span>VIEW PRODUCT</span>
+                  </div>
                   {i === 0 && <span className="prod-badge">NEW</span>}
                 </div>
                 <div className="prod-info">
@@ -299,7 +419,7 @@ function Story() {
           <h2 className="story-title">BUILT FOR<br/>THE RELENTLESS</h2>
           <p className="story-body">LOTTO was built from one belief — elite performance gear shouldn't choose between function and identity. Every stitch, every fabric choice, every silhouette is engineered for people who refuse to treat movement as an afterthought.</p>
           <p className="story-body">We don't make gear for the gym. We make gear for the mindset.</p>
-          <button className="btn-red" style={{ marginTop: '32px' }}>Our Manifesto</button>
+          <button className="btn-red" style={{ marginTop: '32px' }} onClick={() => document.getElementById('story')?.scrollIntoView({ behavior: 'smooth' })}>Our Manifesto</button>
         </div>
         <div className="story-right reveal">
           <div className="stats-grid">
@@ -385,7 +505,17 @@ function Footer() {
       <div className="footer-top">
         <span className="footer-logo">LOTTO</span>
         <div className="footer-links">
-          {['Privacy', 'Terms', 'Contact', 'Returns', 'Shipping'].map(l => <a key={l} href="#">{l}</a>)}
+        <div className="footer-links">
+            {[
+              { label: 'Privacy', href: 'https://www.shopify.com/legal/privacy' },
+              { label: 'Terms', href: 'https://www.shopify.com/legal/terms' },
+              { label: 'Contact', href: 'mailto:hello@lotto.com' },
+              { label: 'Returns', href: '#' },
+              { label: 'Shipping', href: '#' },
+            ].map(l => (
+              <a key={l.label} href={l.href} target={l.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer">{l.label}</a>
+            ))}
+          </div>
         </div>
       </div>
       <div className="footer-bottom">
@@ -414,11 +544,57 @@ const CSS = `
         .nav-inner { max-width:1400px; margin:0 auto; height:72px; display:flex; align-items:center; justify-content:space-between; }
         .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:6px; color:#fff; text-decoration:none; }
         .nav-links { display:flex; gap:40px; list-style:none; }
-        .nav-links a { color:rgba(255,255,255,0.5); text-decoration:none; font-size:12px; font-weight:500; letter-spacing:2px; text-transform:uppercase; transition:color 0.2s; }
-        .nav-links a:hover { color:#fff; }
-        .nav-cart { background:none; border:1px dashed rgba(255,255,255,0.2); color:#fff; cursor:none; position:relative; display:flex; align-items:center; padding:10px; transition:border-color 0.2s; }
+        .nav-links a, .nav-link-btn { color:rgba(255,255,255,0.5); text-decoration:none; font-size:12px; font-weight:500; letter-spacing:2px; text-transform:uppercase; transition:color 0.2s; background:none; border:none; cursor:pointer; font-family:'Inter',sans-serif; padding:0; }
+        .nav-links a:hover, .nav-link-btn:hover { color:#fff; }
+        .nav-actions { display:flex; align-items:center; gap:8px; }
+        .nav-search { background:none; border:1px dashed rgba(255,255,255,0.2); color:#fff; cursor:pointer; display:flex; align-items:center; padding:10px; transition:border-color 0.2s,background 0.2s; }
+        .nav-search:hover { border-color:rgba(255,59,0,0.6); background:rgba(255,59,0,0.06); }
+        .nav-cart { background:none; border:1px dashed rgba(255,255,255,0.2); color:#fff; cursor:pointer; position:relative; display:flex; align-items:center; padding:10px; transition:border-color 0.2s; }
         .nav-cart:hover { border-color:rgba(255,59,0,0.6); }
         .nav-badge { position:absolute; top:-6px; right:-6px; background:#FF3B00; color:#fff; font-size:9px; font-weight:700; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+
+        /* ── Hamburger ── */
+        .nav-hamburger { display:none; flex-direction:column; justify-content:center; align-items:center; gap:5px; width:40px; height:40px; background:none; border:1px dashed rgba(255,255,255,0.2); cursor:pointer; padding:0; position:relative; z-index:201; transition:border-color 0.3s; }
+        .nav-hamburger:hover { border-color:rgba(255,59,0,0.5); }
+        .hb-line { display:block; width:18px; height:1.5px; background:#fff; border-radius:1px; transition:transform 0.35s cubic-bezier(0.23,1,0.32,1),opacity 0.2s,width 0.3s; transform-origin:center; }
+        .nav-hamburger--open { border-color:rgba(255,59,0,0.5); }
+        .nav-hamburger--open .hb-line--1 { transform:translateY(6.5px) rotate(45deg); }
+        .nav-hamburger--open .hb-line--2 { opacity:0; width:0; }
+        .nav-hamburger--open .hb-line--3 { transform:translateY(-6.5px) rotate(-45deg); }
+
+        /* ── Full screen mobile menu ── */
+        .mobile-menu { position:fixed; inset:0; z-index:199; background:#080808; display:flex; flex-direction:column; justify-content:center; padding:100px 40px 48px; transform:translateX(100%); transition:transform 0.5s cubic-bezier(0.23,1,0.32,1); overflow:hidden; }
+        .mobile-menu--open { transform:translateX(0); }
+        .mm-bg { position:absolute; inset:0; pointer-events:none; background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(255,59,0,0.02) 40px,rgba(255,59,0,0.02) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,59,0,0.02) 40px,rgba(255,59,0,0.02) 41px); }
+        .mm-corner { position:absolute; width:32px; height:32px; z-index:1; }
+        .mm-corner--tl { top:14px; left:14px; border-top:1px solid rgba(255,59,0,0.3); border-left:1px solid rgba(255,59,0,0.3); }
+        .mm-corner--tr { top:14px; right:14px; border-top:1px solid rgba(255,59,0,0.3); border-right:1px solid rgba(255,59,0,0.3); }
+        .mm-corner--bl { bottom:14px; left:14px; border-bottom:1px solid rgba(255,59,0,0.3); border-left:1px solid rgba(255,59,0,0.3); }
+        .mm-corner--br { bottom:14px; right:14px; border-bottom:1px solid rgba(255,59,0,0.3); border-right:1px solid rgba(255,59,0,0.3); }
+        .mm-links { list-style:none; display:flex; flex-direction:column; gap:2px; position:relative; z-index:2; }
+        .mm-item { opacity:0; transform:translateX(32px); transition:opacity 0.45s ease,transform 0.45s cubic-bezier(0.23,1,0.32,1); border-bottom:1px dashed rgba(255,255,255,0.06); }
+        .mm-item:first-child { border-top:1px dashed rgba(255,255,255,0.06); }
+        .mobile-menu--open .mm-item { opacity:1; transform:none; }
+        .mm-link { display:flex; align-items:center; gap:16px; padding:20px 0; width:100%; background:none; border:none; cursor:pointer; text-align:left; transition:padding-left 0.25s; }
+        .mm-link:hover { padding-left:10px; }
+        .mm-link-num { font-size:10px; font-weight:700; letter-spacing:2px; color:rgba(255,59,0,0.5); font-family:'Inter',sans-serif; width:24px; flex-shrink:0; }
+        .mm-link-text { font-family:'Bebas Neue',sans-serif; font-size:clamp(44px,12vw,72px); letter-spacing:3px; color:#fff; line-height:1; flex:1; transition:color 0.2s; }
+        .mm-link:hover .mm-link-text { color:#FF3B00; }
+        .mm-link-arrow { font-size:24px; color:rgba(255,59,0,0); transition:color 0.2s,transform 0.2s; transform:translateX(-8px); }
+        .mm-link:hover .mm-link-arrow { color:#FF3B00; transform:translateX(0); }
+        .mm-bottom { position:absolute; bottom:32px; left:40px; right:40px; display:flex; align-items:center; justify-content:space-between; z-index:2; opacity:0; transition:opacity 0.4s 0.35s; }
+        .mobile-menu--open .mm-bottom { opacity:1; }
+        .mm-bottom-actions { display:flex; gap:10px; }
+        .mm-icon-btn { display:flex; align-items:center; gap:8px; background:none; border:1px dashed rgba(255,255,255,0.15); color:rgba(255,255,255,0.45); padding:10px 14px; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s; }
+        .mm-icon-btn:hover { border-color:rgba(255,59,0,0.4); color:#FF3B00; }
+        .mm-tagline { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,0.15); font-family:'Inter',sans-serif; }
+
+        /* Show hamburger on mobile, hide desktop nav links */
+        @media(max-width:768px) {
+          .nav-hamburger { display:flex; }
+          .nav-links { display:none; }
+          .nav-search { display:none; }
+        }
 
         /* Marquee */
         .marquee-wrap { overflow:hidden; background:#080808; padding:13px 0; border-top:1px dashed rgba(255,59,0,0.25); border-bottom:1px dashed rgba(255,59,0,0.25); }
@@ -645,6 +821,19 @@ const CSS = `
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Cmd+K / Ctrl+K opens search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(s => !s);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     shopifyFetch({ query: PRODUCTS_QUERY })
@@ -664,34 +853,38 @@ export default function App() {
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-  const HomePage = () => (
-    <>
-      <Cursor />
-      <Navbar />
-      <Hero onShopClick={() => scrollTo('products')} />
-      <ShoeRotator frameCount={30} framePrefix="/shoe/frame-" frameSuffix=".png" framePad={3} />
-      <Marquee />
-      <Collections />
-      <Products products={products} onProductClick={setSelected} />
-      <Marquee inverted />
-      <Story />
-      <Testimonials />
-      <Newsletter />
-      <Footer />
-      {selected && (
-        <Suspense fallback={null}>
-          <ProductModal handle={selected} onClose={() => setSelected(null)} />
-        </Suspense>
-      )}
-      <CartModal />
-    </>
-  );
-
   return (
     <>
       <style>{CSS}</style>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={
+          <>
+            <Cursor />
+            <Navbar onSearchOpen={() => setSearchOpen(true)} />
+            <Hero onShopClick={() => scrollTo('products')} />
+            <ShoeRotator frameCount={30} framePrefix="/shoe/frame-" frameSuffix=".png" framePad={3} />
+            <Marquee />
+            <Collections />
+            <Products products={products} onProductClick={setSelected} />
+            <Marquee inverted />
+            <Story />
+            <Testimonials />
+            <Newsletter />
+            <Footer />
+            {selected && (
+              <Suspense fallback={null}>
+                <ProductModal handle={selected} onClose={() => setSelected(null)} />
+              </Suspense>
+            )}
+            {searchOpen && (
+              <SearchModal
+                onClose={() => setSearchOpen(false)}
+                onProductClick={(handle) => { setSelected(handle); setSearchOpen(false); }}
+              />
+            )}
+            <CartModal />
+          </>
+        } />
         <Route path="/cart" element={<CartPage />} />
       </Routes>
     </>
