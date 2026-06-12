@@ -15,127 +15,261 @@ export default function CartModal() {
   const lines = cart?.lines.edges.map(e => e.node) ?? [];
   const subtotal = cart?.cost.subtotalAmount;
 
+  // Append return_to param so Shopify sends user back to our app
+  const checkoutUrl = cart?.checkoutUrl
+    ? cart.checkoutUrl + (cart.checkoutUrl.includes('?') ? '&' : '?')
+      + 'return_to=' + encodeURIComponent(window.location.origin)
+    : null;
+
+  if (!cartOpen) return null;
+
   return (
     <>
+      <style>{`
+        .cm-backdrop {
+          position: fixed; inset: 0; z-index: 140;
+          background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+          animation: cmFadeIn 0.2s ease;
+        }
+        @keyframes cmFadeIn { from{opacity:0} to{opacity:1} }
+
+        .cm-modal {
+          position: fixed; top: 50%; left: 50%; z-index: 141;
+          transform: translate(-50%, -50%);
+          width: min(460px, 94vw);
+          max-height: 85vh;
+          background: #0f0f0f;
+          border: 1px solid rgba(255,59,0,0.2);
+          display: flex; flex-direction: column;
+          animation: cmSlideUp 0.3s cubic-bezier(0.23,1,0.32,1);
+          font-family: 'Inter', sans-serif;
+        }
+        @keyframes cmSlideUp {
+          from { transform: translate(-50%, calc(-50% + 20px)); opacity: 0; }
+          to   { transform: translate(-50%, -50%); opacity: 1; }
+        }
+
+        .cm-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 18px 22px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
+        }
+        .cm-header-title {
+          display: flex; align-items: center; gap: 10px;
+        }
+        .cm-title {
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 22px; letter-spacing: 3px; color: #fff;
+        }
+        .cm-count {
+          background: #FF3B00; color: #fff;
+          font-size: 10px; font-weight: 800;
+          width: 20px; height: 20px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .cm-close {
+          width: 32px; height: 32px; border-radius: 50%;
+          background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.5); cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 14px; transition: background 0.2s, color 0.2s;
+        }
+        .cm-close:hover { background: rgba(255,59,0,0.15); color: #fff; border-color: rgba(255,59,0,0.3); }
+
+        .cm-items {
+          flex: 1; overflow-y: auto;
+          padding: 8px 0;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,59,0,0.2) transparent;
+        }
+        .cm-items::-webkit-scrollbar { width: 3px; }
+        .cm-items::-webkit-scrollbar-thumb { background: rgba(255,59,0,0.3); }
+
+        .cm-empty {
+          padding: 52px 24px; text-align: center;
+          display: flex; flex-direction: column; align-items: center; gap: 12px;
+        }
+        .cm-empty-icon { font-size: 44px; }
+        .cm-empty-text { font-size: 13px; color: rgba(255,255,255,0.35); }
+        .cm-empty-btn {
+          margin-top: 8px; padding: 10px 22px;
+          background: none; border: 1px dashed rgba(255,59,0,0.3);
+          color: rgba(255,59,0,0.7); font-size: 11px; font-weight: 700;
+          letter-spacing: 2px; text-transform: uppercase;
+          cursor: pointer; font-family: 'Inter', sans-serif;
+          transition: all 0.2s;
+        }
+        .cm-empty-btn:hover { border-color: #FF3B00; color: #FF3B00; }
+
+        .cm-item {
+          display: flex; align-items: center; gap: 14px;
+          padding: 14px 22px;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          transition: background 0.15s;
+        }
+        .cm-item:last-child { border-bottom: none; }
+        .cm-item:hover { background: rgba(255,255,255,0.02); }
+
+        .cm-item-img {
+          width: 60px; height: 60px; flex-shrink: 0;
+          background: #1a1a1a; overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+        .cm-item-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .cm-item-info { flex: 1; min-width: 0; }
+        .cm-item-name {
+          font-size: 13px; font-weight: 600; color: #fff;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          margin-bottom: 3px;
+        }
+        .cm-item-variant { font-size: 11px; color: rgba(255,255,255,0.35); margin-bottom: 5px; }
+        .cm-item-price { font-size: 13px; font-weight: 700; color: #FF3B00; }
+
+        .cm-qty {
+          display: flex; align-items: center;
+          border: 1px solid rgba(255,255,255,0.1);
+          flex-shrink: 0;
+        }
+        .cm-qty-btn {
+          width: 26px; height: 26px; background: none; border: none;
+          color: rgba(255,255,255,0.5); font-size: 16px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: color 0.15s, background 0.15s; line-height: 1;
+        }
+        .cm-qty-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+        .cm-qty-num {
+          width: 26px; height: 26px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 12px; font-weight: 600; color: #fff;
+          border-left: 1px solid rgba(255,255,255,0.1);
+          border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .cm-remove {
+          background: none; border: none; color: rgba(255,255,255,0.2);
+          cursor: pointer; padding: 4px; font-size: 12px;
+          transition: color 0.15s; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .cm-remove:hover { color: #ef4444; }
+
+        .cm-footer {
+          padding: 16px 22px 20px;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          flex-shrink: 0;
+        }
+        .cm-subtotal {
+          display: flex; justify-content: space-between; align-items: center;
+          margin-bottom: 5px;
+        }
+        .cm-subtotal-label {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          text-transform: uppercase; color: rgba(255,255,255,0.35);
+        }
+        .cm-subtotal-amt {
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 26px; letter-spacing: 2px; color: #fff;
+        }
+        .cm-note { font-size: 10px; color: rgba(255,255,255,0.2); margin-bottom: 14px; }
+
+        .cm-btn-checkout {
+          width: 100%; padding: 15px;
+          background: #FF3B00; color: #fff;
+          font-size: 12px; font-weight: 800; letter-spacing: 3px;
+          text-transform: uppercase; border: none; cursor: pointer;
+          font-family: 'Inter', sans-serif; text-decoration: none;
+          display: block; text-align: center;
+          transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+          margin-bottom: 8px;
+        }
+        .cm-btn-checkout:hover {
+          background: #ff4d1a; transform: translateY(-1px);
+          box-shadow: 0 8px 24px rgba(255,59,0,0.35);
+        }
+        .cm-btn-continue {
+          width: 100%; padding: 11px;
+          background: transparent; border: 1px dashed rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.35); font-size: 11px; font-weight: 600;
+          letter-spacing: 2px; text-transform: uppercase;
+          cursor: pointer; font-family: 'Inter', sans-serif;
+          transition: color 0.2s, border-color 0.2s;
+        }
+        .cm-btn-continue:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.3); }
+      `}</style>
+
       {/* Backdrop */}
-      {cartOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-          onClick={closeCart}
-        />
-      )}
+      <div className="cm-backdrop" onClick={closeCart} />
 
       {/* Modal */}
-      {cartOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col pointer-events-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-gray-900">Your Cart</h2>
-                {totalItems > 0 && (
-                  <span className="text-xs font-semibold text-white bg-black rounded-full w-5 h-5 flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={closeCart}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Items */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              {lines.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
-                  <div className="text-4xl">🛍️</div>
-                  <p className="text-gray-500 text-sm">Your cart is empty.</p>
-                  <button onClick={closeCart} className="text-sm font-medium text-black underline underline-offset-2">
-                    Continue shopping
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  {lines.map(line => {
-                    const img = line.merchandise.product.images.edges[0]?.node;
-                    return (
-                      <div key={line.id} className="flex gap-4 items-start">
-                        {/* Product image */}
-                        <div className="w-16 h-16 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden">
-                          {img && <img src={img.url} alt={img.altText || line.merchandise.product.title} className="w-full h-full object-cover" />}
-                        </div>
-                        {/* Details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 leading-tight truncate">
-                            {line.merchandise.product.title}
-                          </p>
-                          {line.merchandise.title !== 'Default Title' && (
-                            <p className="text-xs text-gray-500 mt-0.5">{line.merchandise.title}</p>
-                          )}
-                          <p className="text-sm font-medium text-gray-800 mt-1">
-                            {formatPrice(line.merchandise.price.amount, line.merchandise.price.currencyCode)}
-                          </p>
-                          {/* Quantity controls */}
-                          <div className="flex items-center gap-0 border border-gray-200 rounded-lg w-fit overflow-hidden mt-2">
-                            <button
-                              onClick={() => line.quantity > 1
-                                ? updateLineQuantity(line.id, line.quantity - 1)
-                                : removeLine(line.id)
-                              }
-                              className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-sm"
-                            >−</button>
-                            <span className="w-7 h-7 flex items-center justify-center text-gray-800 text-xs font-medium border-x border-gray-200">{line.quantity}</span>
-                            <button
-                              onClick={() => updateLineQuantity(line.id, line.quantity + 1)}
-                              className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors text-sm"
-                            >+</button>
-                          </div>
-                        </div>
-                        {/* Remove */}
-                        <button
-                          onClick={() => removeLine(line.id)}
-                          className="text-gray-300 hover:text-red-400 transition-colors mt-0.5"
-                          aria-label="Remove item"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                            <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                          </svg>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            {lines.length > 0 && subtotal && (
-              <div className="px-6 pb-6 pt-4 border-t border-gray-100 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Subtotal</span>
-                  <span className="text-base font-bold text-gray-900">
-                    {formatPrice(subtotal.amount, subtotal.currencyCode)}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 text-center">Shipping & taxes calculated at checkout</p>
-                <a
-                  href={cart?.checkoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 bg-black text-white text-sm font-semibold rounded-xl text-center hover:bg-gray-800 transition-colors active:scale-[0.99]"
-                >
-                  Checkout →
-                </a>
-              </div>
-            )}
+      <div className="cm-modal">
+        {/* Header */}
+        <div className="cm-header">
+          <div className="cm-header-title">
+            <span className="cm-title">YOUR CART</span>
+            {totalItems > 0 && <span className="cm-count">{totalItems}</span>}
           </div>
+          <button className="cm-close" onClick={closeCart}>✕</button>
         </div>
-      )}
+
+        {/* Items */}
+        <div className="cm-items">
+          {lines.length === 0 ? (
+            <div className="cm-empty">
+              <span className="cm-empty-icon">🛍️</span>
+              <p className="cm-empty-text">Your cart is empty.</p>
+              <button className="cm-empty-btn" onClick={closeCart}>Continue Shopping</button>
+            </div>
+          ) : (
+            lines.map(line => {
+              const img = line.merchandise.product.images.edges[0]?.node;
+              return (
+                <div key={line.id} className="cm-item">
+                  <div className="cm-item-img">
+                    {img && <img src={img.url} alt={line.merchandise.product.title} />}
+                  </div>
+                  <div className="cm-item-info">
+                    <p className="cm-item-name">{line.merchandise.product.title}</p>
+                    {line.merchandise.title !== 'Default Title' && (
+                      <p className="cm-item-variant">{line.merchandise.title}</p>
+                    )}
+                    <p className="cm-item-price">
+                      {formatPrice(line.merchandise.price.amount, line.merchandise.price.currencyCode)}
+                    </p>
+                  </div>
+                  <div className="cm-qty">
+                    <button className="cm-qty-btn"
+                      onClick={() => line.quantity > 1
+                        ? updateLineQuantity(line.id, line.quantity - 1)
+                        : removeLine(line.id)
+                      }>−</button>
+                    <span className="cm-qty-num">{line.quantity}</span>
+                    <button className="cm-qty-btn"
+                      onClick={() => updateLineQuantity(line.id, line.quantity + 1)}>+</button>
+                  </div>
+                  <button className="cm-remove" onClick={() => removeLine(line.id)}>✕</button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        {lines.length > 0 && subtotal && (
+          <div className="cm-footer">
+            <div className="cm-subtotal">
+              <span className="cm-subtotal-label">Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+              <span className="cm-subtotal-amt">{formatPrice(subtotal.amount, subtotal.currencyCode)}</span>
+            </div>
+            <p className="cm-note">Shipping & taxes calculated at checkout</p>
+            {checkoutUrl && (
+              <a href={checkoutUrl} className="cm-btn-checkout">CHECKOUT →</a>
+            )}
+            <button className="cm-btn-continue" onClick={closeCart}>Continue Shopping</button>
+          </div>
+        )}
+      </div>
     </>
   );
 }
