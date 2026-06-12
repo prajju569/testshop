@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 
 interface ShoeRotatorProps {
   frameCount?: number;       // total number of frames you have
@@ -209,7 +210,7 @@ function RotatorPhrase({
   totalPct,
 }: {
   text: string;
-  sectionRef: React.RefObject<HTMLElement | null>;
+  sectionRef: RefObject<HTMLElement | null>;
   triggerPct: number;
   totalPct: number;
 }) {
@@ -238,7 +239,7 @@ function RotatorPhrase({
 }
 
 /* Thin red progress bar at bottom */
-function ScrollProgress({ sectionRef }: { sectionRef: React.RefObject<HTMLElement | null> }) {
+function ScrollProgress({ sectionRef }: { sectionRef: RefObject<HTMLElement | null> }) {
   const [pct, setPct] = useState(0);
   useEffect(() => {
     const fn = () => {
